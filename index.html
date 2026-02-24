@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>웹소설 통합 랭킹</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg">
+        <header class="p-4 border-b">
+            <h1 class="text-xl font-bold text-blue-600">통합 랭킹 2026</h1>
+            <div class="flex gap-2 mt-3 text-sm overflow-x-auto pb-2">
+                <button onclick="filterData('전체')" class="px-3 py-1 bg-gray-200 rounded-full shrink-0">전체</button>
+                <button onclick="filterData('카카오')" class="px-3 py-1 bg-gray-100 rounded-full shrink-0">카카오</button>
+                <button onclick="filterData('시리즈')" class="px-3 py-1 bg-gray-100 rounded-full shrink-0">시리즈</button>
+                <button onclick="filterData('문피아')" class="px-3 py-1 bg-gray-100 rounded-full shrink-0">문피아</button>
+            </div>
+        </header>
+
+        <div id="ranking-list" class="divide-y">
+            <div class="p-8 text-center text-gray-400">데이터를 불러오는 중...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '여기에_복사한_GAS_URL을_넣으세요';
+        let allData = [];
+
+        async function fetchData() {
+            const res = await fetch(API_URL);
+            allData = await res.json();
+            // 조회수(hits) 높은 순으로 정렬
+            allData.sort((a, b) => b.hits - a.hits);
+            render(allData);
+        }
+
+        function render(data) {
+            const list = document.getElementById('ranking-list');
+            list.innerHTML = data.map((item, index) => `
+                <div class="p-4 flex items-center hover:bg-gray-50">
+                    <span class="text-lg font-bold w-8 text-gray-400">${index + 1}</span>
+                    <div class="flex-1 ml-2">
+                        <div class="font-medium text-gray-800">${item.title}</div>
+                        <div class="text-xs text-gray-500">${item.author} · ${item.platform}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-blue-500 font-bold text-sm">${Number(item.hits).toLocaleString()}</div>
+                        <div class="text-[10px] text-gray-400 font-medium">조회수</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterData(platform) {
+            if (platform === '전체') render(allData);
+            else render(allData.filter(item => item.platform === platform));
+        }
+
+        fetchData();
+    </script>
+</body>
+</html>
