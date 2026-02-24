@@ -3,61 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>웹소설 통합 랭킹</title>
+    <title>웹소설 통합 랭킹 센터</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .active-tab { border-bottom: 2px solid #1e40af; color: #1e40af; font-weight: 700; }
+    </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg">
-        <header class="p-4 border-b">
-            <h1 class="text-xl font-bold text-blue-600">통합 랭킹 2026</h1>
-            <div class="flex gap-2 mt-3 text-sm overflow-x-auto pb-2">
-                <button onclick="filterData('전체')" class="px-3 py-1 bg-gray-200 rounded-full shrink-0">전체</button>
-                <button onclick="filterData('카카오')" class="px-3 py-1 bg-gray-100 rounded-full shrink-0">카카오</button>
-                <button onclick="filterData('시리즈')" class="px-3 py-1 bg-gray-100 rounded-full shrink-0">시리즈</button>
-                <button onclick="filterData('문피아')" class="px-3 py-1 bg-gray-100 rounded-full shrink-0">문피아</button>
+<body class="bg-gray-100">
+
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-sm relative">
+        <header class="sticky top-0 bg-white z-10">
+            <div class="px-5 py-4 flex justify-between items-center">
+                <h1 class="text-xl font-bold tracking-tight text-gray-800">2026 통합 랭킹</h1>
+                <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">LIVE</span>
+            </div>
+            
+            <div class="flex border-b text-sm text-gray-500 overflow-x-auto whitespace-nowrap scrollbar-hide">
+                <button onclick="filterByPlatform('전체', this)" class="flex-1 px-4 py-3 active-tab">전체</button>
+                <button onclick="filterByPlatform('카카오', this)" class="flex-1 px-4 py-3">카카오</button>
+                <button onclick="filterByPlatform('시리즈', this)" class="flex-1 px-4 py-3">시리즈</button>
+                <button onclick="filterByPlatform('문피아', this)" class="flex-1 px-4 py-3">문피아</button>
+                <button onclick="filterByPlatform('노벨피아', this)" class="flex-1 px-4 py-3">노벨피아</button>
+            </div>
+
+            <div class="px-5 py-3 flex justify-between items-center bg-gray-50 text-xs text-gray-600">
+                <div id="count-label">총 0개의 작품</div>
+                <select id="sort-order" onchange="sortData()" class="bg-transparent font-medium focus:outline-none">
+                    <option value="hits">조회수순</option>
+                    <option value="rating">평점순</option>
+                </select>
             </div>
         </header>
 
-        <div id="ranking-list" class="divide-y">
-            <div class="p-8 text-center text-gray-400">데이터를 불러오는 중...</div>
-        </div>
+        <main id="novel-list" class="divide-y divide-gray-100">
+            <div class="flex flex-col items-center justify-center py-20 text-gray-400">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                <p>데이터를 불러오는 중입니다...</p>
+            </div>
+        </main>
     </div>
 
     <script>
-        const API_URL = '여기에_복사한_GAS_URL을_넣으세요';
-        let allData = [];
+        // 1. 여기에 구글 앱스 스크립트 배포 URL을 넣으세요!
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFBWKPfc7fdBUYeDRVcdsUJGjohb8uCvdTrl2aM9UfyNuSaNWP7Bai9bngC30QM_K-/exec"; 
+        
+        let originalData = [];
+        let currentData = [];
 
-        async function fetchData() {
-            const res = await fetch(API_URL);
-            allData = await res.json();
-            // 조회수(hits) 높은 순으로 정렬
-            allData.sort((a, b) => b.hits - a.hits);
-            render(allData);
+        // 데이터 불러오기 함수
+        async function loadData() {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                
+                // 데이터 샘플 (테스트용 - 실제 연결 시 주석 처리하거나 삭제하세요)
+                // originalData = [
+                //     {title: "데뷔 못 하면 죽는 병 걸림", author: "백덕수", platform: "카카오", hits: 450000000, rating: 4.8},
+                //     {title: "화산귀환", author: "비가", platform: "시리즈", hits: 1600000000, rating: 4.9},
+                //     {title: "전지적 독자 시점", author: "싱숑", platform: "문피아", hits: 300000000, rating: 4.7}
+                // ];
+
+                originalData = data; // 실제 API 연결 시 사용
+                currentData = [...originalData];
+                sortData(); // 초기 정렬
+            } catch (error) {
+                document.getElementById('novel-list').innerHTML = `<div class="p-10 text-center text-red-500 text-sm">데이터를 불러오지 못했습니다.<br>스크립트 URL과 권한 설정을 확인하세요.</div>`;
+            }
         }
 
+        // 화면 렌더링 함수
         function render(data) {
-            const list = document.getElementById('ranking-list');
-            list.innerHTML = data.map((item, index) => `
-                <div class="p-4 flex items-center hover:bg-gray-50">
-                    <span class="text-lg font-bold w-8 text-gray-400">${index + 1}</span>
-                    <div class="flex-1 ml-2">
-                        <div class="font-medium text-gray-800">${item.title}</div>
-                        <div class="text-xs text-gray-500">${item.author} · ${item.platform}</div>
+            const listContainer = document.getElementById('novel-list');
+            const countLabel = document.getElementById('count-label');
+            
+            countLabel.innerText = `총 ${data.length}개의 작품`;
+            
+            if(data.length === 0) {
+                listContainer.innerHTML = `<div class="py-20 text-center text-gray-400">해당하는 작품이 없습니다.</div>`;
+                return;
+            }
+
+            listContainer.innerHTML = data.map((item, index) => `
+                <div class="px-5 py-4 flex items-center transition active:bg-gray-100">
+                    <div class="w-8 text-lg font-bold ${index < 3 ? 'text-blue-600' : 'text-gray-300'}">${index + 1}</div>
+                    <div class="flex-1 px-2 overflow-hidden">
+                        <div class="font-bold text-[15px] truncate text-gray-800">${item.title}</div>
+                        <div class="text-xs text-gray-500 mt-1">${item.author} · <span class="text-blue-400 font-medium">${item.platform}</span></div>
                     </div>
-                    <div class="text-right">
-                        <div class="text-blue-500 font-bold text-sm">${Number(item.hits).toLocaleString()}</div>
-                        <div class="text-[10px] text-gray-400 font-medium">조회수</div>
+                    <div class="text-right shrink-0">
+                        <div class="text-sm font-bold text-gray-700">${formatNumber(item.hits)}</div>
+                        <div class="text-[10px] text-gray-400 uppercase tracking-tighter">Views</div>
                     </div>
                 </div>
             `).join('');
         }
 
-        function filterData(platform) {
-            if (platform === '전체') render(allData);
-            else render(allData.filter(item => item.platform === platform));
+        // 정렬 기능
+        function sortData() {
+            const type = document.getElementById('sort-order').value;
+            currentData.sort((a, b) => b[type] - a[type]);
+            render(currentData);
         }
 
-        fetchData();
+        // 플랫폼 필터 기능
+        function filterByPlatform(platform, el) {
+            // 탭 스타일 변경
+            document.querySelectorAll('header button').forEach(btn => btn.classList.remove('active-tab'));
+            el.classList.add('active-tab');
+
+            if (platform === '전체') {
+                currentData = [...originalData];
+            } else {
+                currentData = originalData.filter(item => item.platform === platform);
+            }
+            sortData();
+        }
+
+        // 숫자 포맷팅 (예: 1,000,000)
+        function formatNumber(num) {
+            return Number(num).toLocaleString();
+        }
+
+        // 시작
+        loadData();
     </script>
 </body>
 </html>
